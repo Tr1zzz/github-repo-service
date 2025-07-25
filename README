@@ -1,0 +1,72 @@
+# GitHub Repo Service
+
+Small Spring Boot API that returns a user`s **non-fork** GitHub repositories with all branches and the last commit SHA for each branch.
+
+## Requirements
+- Java 21
+- Maven 3.x
+- Internet access (the app calls the public GitHub REST API v3)
+
+## Tech Stack
+Spring Boot 3.5 (MVC + RestTemplate), Java records for DTOs, one JUnit 5 integration test.
+
+_No WebFlux, no pagination and no DDD/hexagonal structure - exactly as required._
+
+## How It Works
+`GET /users/{username}/repos` -> call `https://api.github.com/users/{username}/repos`, filter out forks, then for every remaining repo call `.../repos/{owner}/{repo}/branches` to load branches + last commit sha. The aggregated list is returned.
+
+## Build & Run
+
+```bash
+mvn clean package
+java -jar target/github-repo-service-0.0.1-SNAPSHOT.jar
+```
+
+Application starts on port **8080**.
+
+## Run Tests
+
+Single integration test (happy path):
+
+```bash
+mvn test
+```
+
+Or run only that class:
+
+```bash
+mvn -Dtest=GithubIntegrationTest test
+```
+
+> Test hits the real GitHub API (`octocat`). If you hit a rate limit, wait a bit and rerun.
+
+## Manual Testing (Postman / curl)
+
+### Success
+`GET http://localhost:8080/users/octocat/repos`
+
+Example response (truncated):
+
+```json
+[
+  {
+    "name": "Hello-World",
+    "ownerLogin": "octocat",
+    "branches": [
+      { "name": "main", "commit": { "sha": "7fd1a60b01f91..." } }
+    ]
+  }
+]
+```
+
+### Not Found
+`GET http://localhost:8080/users/this_user_does_not_exist_123/repos`
+
+Response:
+
+```json
+{
+  "status": 404,
+  "message": "User not found: this_user_does_not_exist_123"
+}
+```
